@@ -14,6 +14,8 @@ We'll only look at reading from a single VM because the main use-case we're inte
 
 ## Instrumenting Zarr readers
 
+I'm not just interested in "who is the fastest". I'm also interested in _how_ we can speed up each Zarr reader. So I'll also try to instrument `zarr-python` so we can see a timeline of chunks passing in parallel through the pipeline, which I hope will help us figure out how to speed up `zarr-python`.
+
 I'd also like to try instrumenting these Zarr readers to create precise timelines of when each chunk passes to the next step in the pipeline:
 
 1. Send GET request.
@@ -22,15 +24,15 @@ I'd also like to try instrumenting these Zarr readers to create precise timeline
 4. Start decompression.
 5. Copy decompressed chunk into final array.
 
-For example, an optimal Zarr reader might submit GET requests in quick succession, and maintain about 100 network requests in flight at any given moment, and overlap decompression with network IO. The timeline of this "optimal" Zarr reader might look something like this (assuming we artificially limit parallelism so that no more than two chunks can be processed at once, to make it easier to visualise):
+For example, an optimal Zarr reader might submit GET requests in quick succession, and maintain about 100 network requests in flight at any given moment, and overlap decompression with network IO. The timeline of this optimal Zarr reader might look something like this (assuming we artificially limit parallelism so that no more than two chunks can be processed at once, to make it easier to visualise):
 
 ```
        |---------------------> time -------------------->
        
 chunk1 | 1----------2-----3-4-5
-chunk2 | 1----------2-----3-4-5
+chunk2 |  1----------2-----3-4-5
 chunk3 |                  1----------2-----3-4-5
-chunk4 |                  1----------2-----3-4-5
+chunk4 |                   1----------2-----3-4-5
 ```
 
 
